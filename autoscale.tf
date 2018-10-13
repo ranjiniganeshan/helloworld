@@ -1,10 +1,25 @@
-resource "aws_autoscaling_attachment" "svc_asg_external2" {
-  alb_target_group_arn   = "${aws_alb_target_group.alb_target_group.arn}"
-  autoscaling_group_name = "${aws_autoscaling_group.svc_asg.id}"
+resource "aws_launch_configuration" "dev-launchconfig" {
+  name_prefix          = "dev-launchconfig"
+  image_id             = "${var.AMI}"
+  instance_type        = "t2.micro"
+  key_name             = "${aws_key_pair.mykeypair.key_name}"
+  security_groups      = "${var.alb_security_groups}"
 }
-#Instance Attachment
-resource "aws_alb_target_group_attachment" "svc_physical_external" {
-  target_group_arn = "${aws_alb_target_group.alb_target_group.arn}"
-  target_id        = "${aws_instance.svc.id}"  
-  port             = 8080
+
+resource "aws_autoscaling_group" "dev-autoscaling" {
+  name                 = "dev-autoscaling"
+  vpc_zone_identifier  = "${var.alb_subnets}"
+  launch_configuration = "${aws_launch_configuration.dev-launchconfig.name}"
+  target_group_arns = ["${aws_alb_target_group.alb_target_group_two.arn}"]
+  min_size             = 1
+  max_size             = 2
+  health_check_grace_period = 300
+  health_check_type = "EC2"
+  force_delete = true
+
+  tag {
+      key = "Name"
+      value = "ec2 instance"
+      propagate_at_launch = true
+  }
 }
